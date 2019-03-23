@@ -1,5 +1,7 @@
 package dcc232
 
+import "fmt"
+
 const (
 	startPos = 0
 	stopPos  = 9
@@ -18,43 +20,35 @@ const (
 // DCC 1 bit: 01    short low, short high
 // DCC 0 bit: 0011  long low, long high. high may be longer
 func EncodePacket(packet Packet) []byte {
-
 	var serialBytes []byte
 	var position int
 	var currentByte RS232Byte
+	stretch := make([]byte, len(packet))
+	maxStretch := byte(4)
 	packetOffset := 0
-	last0PacketOffset := -1
-	last0Stretch := 0
-	last0BytesLength := 0
-	last0Position := 0
 
-	restartAtLast0 := func(stretch int) {
-		if last0PacketOffset < 0 {
-			panic("No earlier ')' bit available")
+	stretchLast0AndRestart := func(startOffset int) {
+		offset := startOffset
+		for offset >= 0 {
+			if !packet[offset] {
+				// We found a '0'
+				if stretch[offset] < maxStretch {
+					// We found a non-stretched '0'
+					stretch[offset] = stretch[offset] + 2
+					for i := offset + 1; i < len(packet); i++ {
+						stretch[i] = 0
+					}
+					packetOffset = 0
+					serialBytes = serialBytes[:0]
+					position = 0
+					currentByte = 0
+					return
+				}
+			}
+			offset--
 		}
-		// Set packet offset
-		packetOffset = last0PacketOffset + 1
-		// Reset current byte
-		if len(serialBytes) == last0BytesLength {
-			// Still in same current byte
-		} else {
-			// Restore current byte and trim serialBytes
-			currentByte = RS232Byte(serialBytes[last0BytesLength])
-			serialBytes = serialBytes[:last0BytesLength]
-		}
-		// Reset position
-		position = last0Position
-		// Set stretched bits
-		currentByte.Set(position+0, false)
-		currentByte.Set(position+1, false)
-		currentByte.Set(position+2, true)
-		currentByte.Set(position+3, true)
-		position += 4
-		last0Stretch += stretch
-		for i := 0; i < last0Stretch; i++ {
-			currentByte.Set(position, true)
-			position++
-		}
+		// Find last '0'
+		panic(fmt.Sprintf("No unstretched '0' bit available starting at %d in %s", startOffset, packet.String()))
 	}
 
 	for packetOffset < len(packet) {
@@ -66,28 +60,19 @@ func EncodePacket(packet Packet) []byte {
 		}
 
 		value := packet[packetOffset]
+		stretched := stretch[packetOffset]
 		packetOffset++
 		if value {
 			// "1"
-			if position == stopPos {
-				// Go back to last "0"
-				restartAtLast0(1)
-			} else {
-				// We have room for "1" bit
-				currentByte.Set(position+0, false)
-				currentByte.Set(position+1, true)
-				position += 2
-			}
+			// We have room for "1" bit
+			currentByte.Set(position+0, false)
+			currentByte.Set(position+1, true)
+			position += 2
 		} else {
 			// "0"
-			if position <= 6 {
+			length := int(4 + stretched)
+			if position+length <= 10 {
 				// We have room for "0" bit
-
-				// Record position
-				last0PacketOffset = packetOffset - 1
-				last0Stretch = 0
-				last0BytesLength = len(serialBytes)
-				last0Position = position
 
 				// Set bits
 				currentByte.Set(position+0, false)
@@ -95,9 +80,13 @@ func EncodePacket(packet Packet) []byte {
 				currentByte.Set(position+2, true)
 				currentByte.Set(position+3, true)
 				position += 4
+				for i := byte(0); i < stretched; i++ {
+					currentByte.Set(position, true)
+					position++
+				}
 			} else {
-				// Go back to last "0"
-				restartAtLast0(10 - position)
+				// Go back to last "0" and make it longer
+				stretchLast0AndRestart(packetOffset - 2)
 			}
 		}
 	}
