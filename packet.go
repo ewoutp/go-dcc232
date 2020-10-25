@@ -130,3 +130,62 @@ func SpeedAndDirection(address int, speed byte, direction bool, speedSteps Speed
 	bits[offset] = true
 	return bits
 }
+
+// FunctionGroupOne creates a packet to control F0, F1-F4
+func FunctionGroupOne(address int, fl, f1, f2, f3, f4 bool) Packet {
+	addressBytes := 1
+	if address > 127 {
+		addressBytes = 2
+	}
+	dataBytes := 1
+	bits := make(Packet, preambleCount+1+((addressBytes+dataBytes+1)*9))
+	offset := preambleCount + 1
+	error := byte(0)
+	for i := 0; i < preambleCount; i++ {
+		bits[i] = true
+	}
+
+	// First address byte
+	if addressBytes == 1 {
+		// Single
+		value := byte(address & 0x7f)
+		bits.encodeByte(offset, value)
+		offset += 9
+		error ^= value
+	} else {
+		// 2 address bytes
+		value1 := byte(0xc0 | ((address >> 8) & 0x3f))
+		bits.encodeByte(offset, value1)
+		offset += 9
+		value2 := byte(address & 0xff)
+		bits.encodeByte(offset, value2)
+		offset += 9
+		error ^= value1
+		error ^= value2
+	}
+
+	data := byte(0x80)
+	if f1 {
+		data |= 0x01
+	}
+	if f2 {
+		data |= 0x02
+	}
+	if f3 {
+		data |= 0x04
+	}
+	if f4 {
+		data |= 0x08
+	}
+	if fl {
+		data |= 0x10
+	}
+	bits.encodeByte(offset, data)
+	offset += 9
+	error ^= data
+
+	bits.encodeByte(offset, error)
+	offset += 8
+	bits[offset] = true
+	return bits
+}
