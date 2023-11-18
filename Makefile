@@ -2,6 +2,9 @@ PROJECT=dcc232test
 
 all: binaries
 
+clean: 
+	rm -Rf bin
+
 binaries:
 	CGO_ENABLED=0 gox \
 		-osarch="linux/amd64 linux/arm" \
