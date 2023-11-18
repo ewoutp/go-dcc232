@@ -2,6 +2,7 @@ package dcc232
 
 import (
 	"encoding/hex"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,11 +12,13 @@ func TestEncodePacket(t *testing.T) {
 	p := IdlePacket()
 	sb := EncodePacket(p)
 	assert.Equal(t, "5555555595e6e6e6e6565519", hex.EncodeToString(sb))
+	assert.Equal(t, "43 / 12", fmt.Sprintf("%d / %d", len(p), len(sb)))
 }
 
 func TestEncodeSpeed(t *testing.T) {
 	p := SpeedAndDirection(1, 2, true, SpeedSteps128)
-	EncodePacket(p)
+	sb := EncodePacket(p)
+	assert.Equal(t, "52 / 17", fmt.Sprintf("%d / %d", len(p), len(sb)))
 }
 
 func TestEncodeAllSpeeds(t *testing.T) {

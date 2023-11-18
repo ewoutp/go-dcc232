@@ -29,6 +29,40 @@ const (
 	SpeedSteps14  SpeedSteps = 14
 )
 
+var (
+	speed28Steps = []byte{
+		0b00000000, // Stop
+		0b00000010, // Step 1
+		0b00010010, // Step 2
+		0b00000011, // Step 3
+		0b00010011, // Step 4
+		0b00000100, // Step 5
+		0b00010100, // Step 6
+		0b00000101, // Step 7
+		0b00010101, // Step 8
+		0b00000110, // Step 9
+		0b00010110, // Step 10
+		0b00000111, // Step 11
+		0b00010111, // Step 12
+		0b00001000, // Step 13
+		0b00011000, // Step 14
+		0b00001001, // Step 15
+		0b00011001, // Step 16
+		0b00001010, // Step 17
+		0b00011010, // Step 18
+		0b00001011, // Step 19
+		0b00011011, // Step 20
+		0b00001100, // Step 21
+		0b00011100, // Step 22
+		0b00001101, // Step 23
+		0b00011101, // Step 24
+		0b00001110, // Step 25
+		0b00011110, // Step 26
+		0b00001111, // Step 27
+		0b00011111, // Step 28
+	}
+)
+
 // encodeByte encoded a given byte into the first 8 positions
 // from given offset of the packet.
 func (p Packet) encodeByte(offset int, value byte) {
@@ -95,14 +129,22 @@ func SpeedAndDirection(address int, speed byte, direction bool, speedSteps Speed
 	if speedSteps != SpeedSteps128 {
 		// 14 or 28 speed steps
 		// data byte
-		data := byte(0x40)
+		data := byte(0b01000000)
 		if direction {
-			data |= 0x20
+			data |= 0b00100000
 		}
 		if speedSteps == SpeedSteps14 {
+			if speed > 0 {
+				// Skip E-Stop
+				speed++
+			}
 			speed &= 0x0f
 		} else {
-			speed &= 0x1f
+			if speed >= 0 && speed <= 28 {
+				speed = speed28Steps[speed]
+			} else {
+				speed = 0
+			}
 		}
 		data |= speed
 

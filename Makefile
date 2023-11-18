@@ -10,3 +10,6 @@ binaries:
 		-tags="netgo" \
 		github.com/ewoutp/go-dcc232/cmd/dcc232test
 
+test:
+	go test github.com/ewoutp/go-dcc232
+
