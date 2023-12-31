@@ -64,7 +64,7 @@ func EncodePacket(packet Packet) []byte {
 		packetOffset++
 		if value {
 			// "1"
-			// We have room for "1" bit
+			// We always have room for "1" bit
 			currentByte.Set(position+0, false)
 			currentByte.Set(position+1, true)
 			position += 2
@@ -87,6 +87,25 @@ func EncodePacket(packet Packet) []byte {
 			} else {
 				// Go back to last "0" and make it longer
 				stretchLast0AndRestart(packetOffset - 2)
+				continue
+			}
+		}
+		// End of packet, then pad current byte if needed
+		if packetOffset == len(packet) {
+			// End of package
+			for position < stopPos+1 {
+				// We need to pad the current byte
+				if value {
+					// Last value was '1', pad with more '1's
+					currentByte.Set(position+0, false)
+					currentByte.Set(position+1, true)
+					position += 2
+				} else {
+					// Last value was '0', make it longer
+					currentByte.Set(position+0, true)
+					currentByte.Set(position+1, true)
+					position += 2
+				}
 			}
 		}
 	}
