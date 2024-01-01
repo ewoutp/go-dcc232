@@ -22,8 +22,8 @@ func bits(encoded []byte) string {
 func TestEncodePacket(t *testing.T) {
 	p := IdlePacket()
 	sb := EncodePacket(p)
-	assert.Equal(t, "5555555595e6e6e6e65655f9", hex.EncodeToString(sb))
-	assert.Equal(t, "0101010101 0101010101 0101010101 0101010101 0101010011 0011001111 0011001111 0011001111 0011001111 0011010101 0101010101 0100111111", bits(sb))
+	assert.Equal(t, "5555555655e6e6e6e6665555", hex.EncodeToString(sb))
+	assert.Equal(t, "0101010101 0101010101 0101010101 0011010101 0101010101 0011001111 0011001111 0011001111 0011001111 0011001101 0101010101 0101010101", bits(sb))
 	assert.Equal(t, "43 / 12", fmt.Sprintf("%d / %d", len(p), len(sb)))
 }
 

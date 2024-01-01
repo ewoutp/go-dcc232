@@ -11,6 +11,10 @@ func f(x string) string {
 	return strings.Replace(x, " ", "", -1)
 }
 
+func TestIdlePacket(t *testing.T) {
+	p := IdlePacket()
+	assert.Equal(t, f("111111111111111 0 11111111 0 00000000 0 11111111 1"), p.String())
+}
 func TestSpeedAndDirection(t *testing.T) {
 	// SpeedSteps: 14 - Direction: Forward
 	assert.Equal(t, f("111111111111111 0 00000011 0 01100000 0 01100011 1"), SpeedAndDirection(3, 0, true, SpeedSteps14).String())

@@ -76,14 +76,20 @@ func (p Packet) encodeByte(offset int, value byte) {
 func IdlePacket() Packet {
 	p := make(Packet, preambleCount+1+(3*9))
 	offset := 0
+	// preamble '111111111111111'
 	for i := 0; i < preambleCount; i++ {
 		p[offset] = true
 		offset++
 	}
+	// '0'
+	offset++
+	// '11111111 0'
 	p.encodeByte(offset, 0xFF)
 	offset += 9
+	// '00000000 0'
 	p.encodeByte(offset, 0x00)
 	offset += 9
+	// '11111111 1'
 	p.encodeByte(offset, 0xFF)
 	offset += 8
 	p[offset] = true

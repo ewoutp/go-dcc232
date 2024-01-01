@@ -97,7 +97,7 @@ func EncodePacket(packet Packet) []byte {
 				// We need to pad the current byte
 				if value {
 					// Last value was '1', pad with more '1's
-					currentByte.Set(position+0, true)
+					currentByte.Set(position+0, false)
 					currentByte.Set(position+1, true)
 					position += 2
 				} else {
