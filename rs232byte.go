@@ -61,3 +61,16 @@ func (b *RS232Byte) Set(index int, value bool) {
 		}
 	}
 }
+
+// Convert the given byte into a bit string (including start & stop bits)
+func (b RS232Byte) String() string {
+	result := make([]byte, 10)
+	for i := 0; i < 10; i++ {
+		if b.Get(i) {
+			result[i] = '1'
+		} else {
+			result[i] = '0'
+		}
+	}
+	return string(result)
+}
