@@ -34,4 +34,12 @@ func TestSpeedAndDirection(t *testing.T) {
 	assert.Equal(t, f("111111111111111 0 00000011 0 01000000 0 01000011 1"), SpeedAndDirection(3, 0, false, SpeedSteps28).String())
 	assert.Equal(t, f("111111111111111 0 00000001 0 01010010 0 01010011 1"), SpeedAndDirection(1, 2, false, SpeedSteps28).String())
 	assert.Equal(t, f("111111111111111 0 00000001 0 01011000 0 01011001 1"), SpeedAndDirection(1, 14, false, SpeedSteps28).String())
+	// 14-bits address, SpeedSteps: 28 - Direction: Reverse
+	assert.Equal(t, f("111111111111111 0 11000000 0 11011000 0 01011000 0 01000000 1"), SpeedAndDirection(216, 14, false, SpeedSteps28).String())
+}
+
+func TestFunctionGroupOne(t *testing.T) {
+	// Address=216, FL=1, F1=0, F2=0, F3=0, F4=0
+	assert.Equal(t, f("111111111111111 0 11000000 0 11011000 0 10010000 0 10001000 1"), FunctionGroupOne(216, true, false, false, false, false).String())
+
 }

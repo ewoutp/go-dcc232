@@ -50,3 +50,11 @@ func TestEncodeAllSpeeds(t *testing.T) {
 		}
 	}
 }
+
+func TestEncodeFunctionGroupOne(t *testing.T) {
+	p := FunctionGroupOne(216, true, false, false, false, false)
+	sb := EncodePacket(p)
+	assert.Equal(t, f("111111111111111 0 11000000 0 11011000 0 10010000 0 10001000 1"), p.String())
+	assert.Equal(t, "0101010101 0101010101 0101010101 0011110101 0011001111 0011001111 0011001111 0011110101 0011110101 0011001111 0011001101 0011001101 0011001111 0011001111 0011010011 0011001101 0011001111 0011010101", bits(sb))
+	//assert.Equal(t, "52 / 17", fmt.Sprintf("%d / %d", len(p), len(sb)))
+}

@@ -75,15 +75,21 @@ func EncodePacket(packet Packet) []byte {
 				// We have room for "0" bit
 
 				// Set bits
-				currentByte.Set(position+0, false)
-				currentByte.Set(position+1, false)
-				currentByte.Set(position+2, true)
-				currentByte.Set(position+3, true)
-				position += 4
-				for i := byte(0); i < stretched; i++ {
-					currentByte.Set(position, true)
+				for i := 0; i < length; i++ {
+					currentByte.Set(position, !(i < length/2))
 					position++
 				}
+				/*
+					currentByte.Set(position+0, false)
+					currentByte.Set(position+1, false)
+					currentByte.Set(position+2, true)
+					currentByte.Set(position+3, true)
+					position += 4
+					for i := byte(0); i < stretched; i++ {
+						currentByte.Set(position, true)
+						position++
+					}
+				*/
 			} else {
 				// Go back to last "0" and make it longer
 				stretchLast0AndRestart(packetOffset - 2)
