@@ -1,5 +1,7 @@
 package dcc232
 
+import "fmt"
+
 // Packet is a DCC bit stream
 type Packet []bool
 
@@ -16,8 +18,18 @@ func (p Packet) String() string {
 	return string(s)
 }
 
+// Packet length
 const (
+	// Number of preamble bits
 	preambleCount = 15
+
+	// Maximum number of bytes takes by an address
+	MaxAddressBytes = 2
+
+	// Maximum number of bytes taken by the data portion of a packet
+	MaxDataBytes = 3
+
+	MaxPacketLength = preambleCount + 1 + (MaxAddressBytes * 9) + (MaxDataBytes * 9) + 9
 )
 
 // SpeedSteps of a loc decoder
@@ -63,18 +75,10 @@ var (
 	}
 )
 
-// encodeByte encoded a given byte into the first 8 positions
-// from given offset of the packet.
-func (p Packet) encodeByte(offset int, value byte) {
-	for i := 7; i >= 0; i-- {
-		p[offset+i] = (value & 0x01) == 1
-		value = value >> 1
-	}
-}
-
-// IdlePacket creates an Idle packet
-func IdlePacket() Packet {
-	p := make(Packet, preambleCount+1+(3*9))
+// encodePreamble writes the preamble into the head of the given packet
+// including a trailing '0'.
+// Returns: offset for first address byte.
+func (p Packet) encodePreamble() int {
 	offset := 0
 	// preamble '111111111111111'
 	for i := 0; i < preambleCount; i++ {
@@ -83,54 +87,82 @@ func IdlePacket() Packet {
 	}
 	// '0'
 	offset++
-	// '11111111 0'
-	p.encodeByte(offset, 0xFF)
-	offset += 9
-	// '00000000 0'
-	p.encodeByte(offset, 0x00)
-	offset += 9
-	// '11111111 1'
-	p.encodeByte(offset, 0xFF)
-	offset += 8
-	p[offset] = true
-	return p
+	p[offset] = false
+	return offset
 }
 
-// SpeedAndDirection creates a standard speed & direction packet
-func SpeedAndDirection(address int, speed byte, direction bool, speedSteps SpeedSteps) Packet {
+// encodeAddress writes the given address into the given packet
+// at the given offset, including a trailing '0'.
+// Returns: offset after address+'0', updated error code
+func (p Packet) encodeAddress(address, offset int, error byte) (int, byte) {
 	addressBytes := 1
 	if address > 127 {
 		addressBytes = 2
-	}
-	dataBytes := 1
-	if speedSteps == SpeedSteps128 {
-		dataBytes = 2
-	}
-	bits := make(Packet, preambleCount+1+((addressBytes+dataBytes+1)*9))
-	offset := preambleCount + 1
-	error := byte(0)
-	for i := 0; i < preambleCount; i++ {
-		bits[i] = true
 	}
 
 	// First address byte
 	if addressBytes == 1 {
 		// Single
 		value := byte(address & 0x7f)
-		bits.encodeByte(offset, value)
-		offset += 9
-		error ^= value
+		error = p.encodeByte(offset, value, error)
+		offset += 8
+		p[offset] = false
+		offset++
 	} else {
 		// 2 address bytes
 		value1 := byte(0xc0 | ((address >> 8) & 0x3f))
-		bits.encodeByte(offset, value1)
-		offset += 9
+		error = p.encodeByte(offset, value1, error)
+		offset += 8
+		p[offset] = false
+		offset++
 		value2 := byte(address & 0xff)
-		bits.encodeByte(offset, value2)
-		offset += 9
-		error ^= value1
-		error ^= value2
+		error = p.encodeByte(offset, value2, error)
+		offset += 8
+		p[offset] = false
+		offset++
 	}
+	return offset, error
+}
+
+// encodeByte encoded a given byte into the first 8 positions
+// from given offset of the packet.
+// Returns: updated error code
+func (p Packet) encodeByte(offset int, value, error byte) byte {
+	result := error ^ value
+	for i := 7; i >= 0; i-- {
+		p[offset+i] = (value & 0x01) == 1
+		value = value >> 1
+	}
+	return result
+}
+
+// IdlePacket creates an Idle packet
+func IdlePacket() Packet {
+	p := make(Packet, MaxPacketLength)
+	offset := p.encodePreamble()
+
+	// '11111111 0'
+	error := p.encodeByte(offset, 0xFF, 0)
+	offset += 9
+	// '00000000 0'
+	error = p.encodeByte(offset, 0x00, error)
+	offset += 9
+	// '11111111 1'
+	p.encodeByte(offset, error, 0)
+	offset += 8
+	p[offset] = true
+	offset++
+	return p[:offset]
+}
+
+// SpeedAndDirection creates a standard speed & direction packet
+func SpeedAndDirection(address int, speed byte, direction bool, speedSteps SpeedSteps) Packet {
+	p := make(Packet, MaxPacketLength)
+	offset := p.encodePreamble()
+	error := byte(0)
+
+	// Address
+	offset, error = p.encodeAddress(address, offset, error)
 
 	if speedSteps != SpeedSteps128 {
 		// 14 or 28 speed steps
@@ -154,9 +186,8 @@ func SpeedAndDirection(address int, speed byte, direction bool, speedSteps Speed
 		}
 		data |= speed
 
-		bits.encodeByte(offset, data)
+		error = p.encodeByte(offset, data, error)
 		offset += 9
-		error ^= data
 	} else {
 		// 128 speed steps
 		// data byte
@@ -166,52 +197,30 @@ func SpeedAndDirection(address int, speed byte, direction bool, speedSteps Speed
 			data2 |= 0x80
 		}
 
-		bits.encodeByte(offset, data1)
+		error = p.encodeByte(offset, data1, error)
 		offset += 9
-		bits.encodeByte(offset, data2)
+		error = p.encodeByte(offset, data2, error)
 		offset += 9
-		error ^= data1
-		error ^= data2
 	}
-	bits.encodeByte(offset, error)
+	p.encodeByte(offset, error, 0)
 	offset += 8
-	bits[offset] = true
-	return bits
+	p[offset] = true
+	offset++
+	return p[:offset]
 }
 
 // FunctionGroupOne creates a packet to control F0, F1-F4
 func FunctionGroupOne(address int, fl, f1, f2, f3, f4 bool) Packet {
-	addressBytes := 1
-	if address > 127 {
-		addressBytes = 2
-	}
-	dataBytes := 1
-	bits := make(Packet, preambleCount+1+((addressBytes+dataBytes+1)*9))
-	offset := preambleCount + 1
+	p := make(Packet, MaxPacketLength)
+
+	// Preamble
+	offset := p.encodePreamble()
 	error := byte(0)
-	for i := 0; i < preambleCount; i++ {
-		bits[i] = true
-	}
 
-	// First address byte
-	if addressBytes == 1 {
-		// Single
-		value := byte(address & 0x7f)
-		bits.encodeByte(offset, value)
-		offset += 9
-		error ^= value
-	} else {
-		// 2 address bytes
-		value1 := byte(0xc0 | ((address >> 8) & 0x3f))
-		bits.encodeByte(offset, value1)
-		offset += 9
-		value2 := byte(address & 0xff)
-		bits.encodeByte(offset, value2)
-		offset += 9
-		error ^= value1
-		error ^= value2
-	}
+	// Address
+	offset, error = p.encodeAddress(address, offset, error)
 
+	// Data
 	data := byte(0x80)
 	if f1 {
 		data |= 0x01
@@ -228,12 +237,55 @@ func FunctionGroupOne(address int, fl, f1, f2, f3, f4 bool) Packet {
 	if fl {
 		data |= 0x10
 	}
-	bits.encodeByte(offset, data)
+	error = p.encodeByte(offset, data, error)
 	offset += 9
-	error ^= data
 
-	bits.encodeByte(offset, error)
+	p.encodeByte(offset, error, 0)
 	offset += 8
-	bits[offset] = true
-	return bits
+	p[offset] = true
+	offset++
+	return p[:offset]
+}
+
+// FunctionGroupTwo creates a packet to control F5-F8 (firstIndex=5) or F9-F12 (firstIndex=9)
+func FunctionGroupTwo(address int, firstIndex byte, fa, fb, fc, fd bool) Packet {
+	data := byte(0b10100000)
+	switch firstIndex {
+	case 5:
+		data |= 0b00010000
+	case 9:
+		// Do nothing
+	default:
+		panic(fmt.Errorf("invalid firstIndex %d", firstIndex))
+	}
+	p := make(Packet, MaxPacketLength)
+
+	// Preamble
+	offset := p.encodePreamble()
+	error := byte(0)
+
+	// Address
+	offset, error = p.encodeAddress(address, offset, error)
+
+	// Data
+	if fa {
+		data |= 0x01
+	}
+	if fb {
+		data |= 0x02
+	}
+	if fc {
+		data |= 0x04
+	}
+	if fd {
+		data |= 0x08
+	}
+	error = p.encodeByte(offset, data, error)
+	offset += 9
+
+	p.encodeByte(offset, error, 0)
+	offset += 8
+	p[offset] = true
+	offset++
+	return p[:offset]
 }

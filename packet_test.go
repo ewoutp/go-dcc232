@@ -41,5 +41,24 @@ func TestSpeedAndDirection(t *testing.T) {
 func TestFunctionGroupOne(t *testing.T) {
 	// Address=216, FL=1, F1=0, F2=0, F3=0, F4=0
 	assert.Equal(t, f("111111111111111 0 11000000 0 11011000 0 10010000 0 10001000 1"), FunctionGroupOne(216, true, false, false, false, false).String())
+	// Address=83, FL=0, F1=1, F2=1, F3=1, F4=0
+	assert.Equal(t, f("111111111111111 0 01010011 0 10000111 0 11010100 1"), FunctionGroupOne(83, false, true, true, true, false).String())
+	// Address=83, FL=0, F1=1, F2=0, F3=0, F4=1
+	assert.Equal(t, f("111111111111111 0 01010011 0 10001001 0 11011010 1"), FunctionGroupOne(83, false, true, false, false, true).String())
+}
 
+func TestFunctionGroupTwo(t *testing.T) {
+	// Address=216, F5=0, F6=0, F7=0, F8=0
+	assert.Equal(t, f("111111111111111 0 11000000 0 11011000 0 10110000 0 10101000 1"), FunctionGroupTwo(216, 5, false, false, false, false).String())
+	// Address=83, F5=1, F6=1, F7=1, F8=0
+	assert.Equal(t, f("111111111111111 0 01010011 0 10110111 0 11100100 1"), FunctionGroupTwo(83, 5, true, true, true, false).String())
+	// Address=83, F5=1, F6=0, F7=0, F8=1
+	assert.Equal(t, f("111111111111111 0 01010011 0 10111001 0 11101010 1"), FunctionGroupTwo(83, 5, true, false, false, true).String())
+
+	// Address=216, F9=0, F10=0, F11=0, F12=0
+	assert.Equal(t, f("111111111111111 0 11000000 0 11011000 0 10100000 0 10111000 1"), FunctionGroupTwo(216, 9, false, false, false, false).String())
+	// Address=83, F9=1, F10=1, F11=1, F12=0
+	assert.Equal(t, f("111111111111111 0 01010011 0 10100111 0 11110100 1"), FunctionGroupTwo(83, 9, true, true, true, false).String())
+	// Address=83, F9=1, F10=0, F11=0, F12=1
+	assert.Equal(t, f("111111111111111 0 01010011 0 10101001 0 11111010 1"), FunctionGroupTwo(83, 9, true, false, false, true).String())
 }
