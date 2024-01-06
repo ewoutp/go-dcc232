@@ -33,8 +33,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	p0 := dcc232.SpeedAndDirection(36, 0, true, dcc232.SpeedSteps128)
-	p1 := dcc232.SpeedAndDirection(36, 45, true, dcc232.SpeedSteps128)
+	var p0, p1 dcc232.Packet
+	p0 = p0.SpeedAndDirection(36, 0, true, dcc232.SpeedSteps128)
+	p1 = p1.SpeedAndDirection(36, 45, true, dcc232.SpeedSteps128)
 	ep0 := dcc232.EncodePacket(p0)
 	ep1 := dcc232.EncodePacket(p1)
 

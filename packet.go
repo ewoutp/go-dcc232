@@ -75,6 +75,18 @@ var (
 	}
 )
 
+// ensureMaxLength checks the capacity of the given packet.
+// If large enough for an maximum size packet, the given
+// packet is set to maximum length and return.
+// Otherwise a new packet is allocated and returned.
+func (p Packet) ensureMaxLength() Packet {
+	if cap(p) >= MaxPacketLength {
+		// Set to max length
+		return p[:]
+	}
+	return make(Packet, MaxPacketLength)
+}
+
 // encodePreamble writes the preamble into the head of the given packet
 // including a trailing '0'.
 // Returns: offset for first address byte.
@@ -137,8 +149,11 @@ func (p Packet) encodeByte(offset int, value, error byte) byte {
 }
 
 // IdlePacket creates an Idle packet
-func IdlePacket() Packet {
-	p := make(Packet, MaxPacketLength)
+func (p Packet) IdlePacket() Packet {
+	// Use packet of maximum length
+	p = p.ensureMaxLength()
+
+	// Preamble
 	offset := p.encodePreamble()
 
 	// '11111111 0'
@@ -156,8 +171,11 @@ func IdlePacket() Packet {
 }
 
 // SpeedAndDirection creates a standard speed & direction packet
-func SpeedAndDirection(address int, speed byte, direction bool, speedSteps SpeedSteps) Packet {
-	p := make(Packet, MaxPacketLength)
+func (p Packet) SpeedAndDirection(address int, speed byte, direction bool, speedSteps SpeedSteps) Packet {
+	// Use packet of maximum length
+	p = p.ensureMaxLength()
+
+	// Preamble
 	offset := p.encodePreamble()
 	error := byte(0)
 
@@ -187,7 +205,9 @@ func SpeedAndDirection(address int, speed byte, direction bool, speedSteps Speed
 		data |= speed
 
 		error = p.encodeByte(offset, data, error)
-		offset += 9
+		offset += 8
+		p[offset] = false
+		offset++
 	} else {
 		// 128 speed steps
 		// data byte
@@ -198,9 +218,13 @@ func SpeedAndDirection(address int, speed byte, direction bool, speedSteps Speed
 		}
 
 		error = p.encodeByte(offset, data1, error)
-		offset += 9
+		offset += 8
+		p[offset] = false
+		offset++
 		error = p.encodeByte(offset, data2, error)
-		offset += 9
+		offset += 8
+		p[offset] = false
+		offset++
 	}
 	p.encodeByte(offset, error, 0)
 	offset += 8
@@ -210,8 +234,9 @@ func SpeedAndDirection(address int, speed byte, direction bool, speedSteps Speed
 }
 
 // FunctionGroupOne creates a packet to control F0, F1-F4
-func FunctionGroupOne(address int, fl, f1, f2, f3, f4 bool) Packet {
-	p := make(Packet, MaxPacketLength)
+func (p Packet) FunctionGroupOne(address int, fl, f1, f2, f3, f4 bool) Packet {
+	// Use packet of maximum length
+	p = p.ensureMaxLength()
 
 	// Preamble
 	offset := p.encodePreamble()
@@ -238,7 +263,9 @@ func FunctionGroupOne(address int, fl, f1, f2, f3, f4 bool) Packet {
 		data |= 0x10
 	}
 	error = p.encodeByte(offset, data, error)
-	offset += 9
+	offset += 8
+	p[offset] = false
+	offset++
 
 	p.encodeByte(offset, error, 0)
 	offset += 8
@@ -248,7 +275,7 @@ func FunctionGroupOne(address int, fl, f1, f2, f3, f4 bool) Packet {
 }
 
 // FunctionGroupTwo creates a packet to control F5-F8 (firstIndex=5) or F9-F12 (firstIndex=9)
-func FunctionGroupTwo(address int, firstIndex byte, fa, fb, fc, fd bool) Packet {
+func (p Packet) FunctionGroupTwo(address int, firstIndex byte, fa, fb, fc, fd bool) Packet {
 	data := byte(0b10100000)
 	switch firstIndex {
 	case 5:
@@ -258,7 +285,8 @@ func FunctionGroupTwo(address int, firstIndex byte, fa, fb, fc, fd bool) Packet 
 	default:
 		panic(fmt.Errorf("invalid firstIndex %d", firstIndex))
 	}
-	p := make(Packet, MaxPacketLength)
+	// Use packet of maximum length
+	p = p.ensureMaxLength()
 
 	// Preamble
 	offset := p.encodePreamble()
@@ -281,7 +309,9 @@ func FunctionGroupTwo(address int, firstIndex byte, fa, fb, fc, fd bool) Packet 
 		data |= 0x08
 	}
 	error = p.encodeByte(offset, data, error)
-	offset += 9
+	offset += 8
+	p[offset] = false
+	offset++
 
 	p.encodeByte(offset, error, 0)
 	offset += 8
