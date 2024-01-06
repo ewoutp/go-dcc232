@@ -5,6 +5,10 @@ import "fmt"
 const (
 	startPos = 0
 	stopPos  = 9
+
+	// Maximum length of an encoded packet
+	// 1 RS232 byte contains at least 2 DCC bits.
+	MaxEncodedLength = (MaxPacketLength / 2)
 )
 
 // EncodePacket takes a DCC packet (as bit stream) and encodes it
@@ -19,13 +23,23 @@ const (
 //
 // DCC 1 bit: 01    short low, short high
 // DCC 0 bit: 0011  long low, long high. high may be longer
-func EncodePacket(packet Packet) []byte {
-	var serialBytes []byte
+//
+// Inputs:
+// - packet : DCC packet to encode
+// - serialBytes : RS232 output bytes buffer. Can be nil
+func EncodePacket(packet Packet, serialBytes []byte) []byte {
 	var position int
 	var currentByte RS232Byte
-	stretch := make([]byte, len(packet))
+	var stretch [MaxPacketLength]byte
 	maxStretch := byte(4)
 	packetOffset := 0
+
+	maxEncodedLength := (len(packet) + 1) / 2
+	if cap(serialBytes) < maxEncodedLength {
+		serialBytes = make([]byte, 0, maxEncodedLength)
+	} else {
+		serialBytes = serialBytes[:0]
+	}
 
 	stretchLast0AndRestart := func(startOffset int) {
 		offset := startOffset
@@ -79,17 +93,6 @@ func EncodePacket(packet Packet) []byte {
 					currentByte.Set(position, !(i < length/2))
 					position++
 				}
-				/*
-					currentByte.Set(position+0, false)
-					currentByte.Set(position+1, false)
-					currentByte.Set(position+2, true)
-					currentByte.Set(position+3, true)
-					position += 4
-					for i := byte(0); i < stretched; i++ {
-						currentByte.Set(position, true)
-						position++
-					}
-				*/
 			} else {
 				// Go back to last "0" and make it longer
 				stretchLast0AndRestart(packetOffset - 2)
