@@ -171,7 +171,8 @@ func (p Packet) IdlePacket() Packet {
 }
 
 // SpeedAndDirection creates a standard speed & direction packet
-func (p Packet) SpeedAndDirection(address int, speed byte, direction bool, speedSteps SpeedSteps) Packet {
+// Note: FL is only used for speedSteps=14
+func (p Packet) SpeedAndDirection(address int, speed byte, direction bool, speedSteps SpeedSteps, fl bool) Packet {
 	// Use packet of maximum length
 	p = p.ensureMaxLength()
 
@@ -195,6 +196,9 @@ func (p Packet) SpeedAndDirection(address int, speed byte, direction bool, speed
 				speed++
 			}
 			speed &= 0x0f
+			if fl {
+				data |= 0b00010000
+			}
 		} else {
 			if speed >= 0 && speed <= 28 {
 				speed = speed28Steps[speed]
@@ -210,9 +214,13 @@ func (p Packet) SpeedAndDirection(address int, speed byte, direction bool, speed
 		offset++
 	} else {
 		// 128 speed steps
-		// data byte
-		data1 := byte(0x3f)
-		data2 := byte(speed & 0x7f)
+		if speed > 0 {
+			// Skip E-Stop
+			speed++
+		}
+		// data bytes
+		data1 := byte(0b00111111)
+		data2 := speed & 0x7f
 		if direction {
 			data2 |= 0x80
 		}
