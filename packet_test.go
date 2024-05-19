@@ -60,6 +60,15 @@ func TestSpeedAndDirection(t *testing.T) {
 		// 14-bits address, SpeedSteps: 128 - Direction: Reverse
 		assert.Equal(t, f("111111111111111 0 11000000 0 11011000 0 00111111 0 00001111 0 00101000 1"), p.SpeedAndDirection(216, 14, false, SpeedSteps128, false).String())
 		assert.Equal(t, f("111111111111111 0 01110010 0 00111111 0 01111111 0 00110010 1"), p.SpeedAndDirection(114, 126, false, SpeedSteps128, false).String())
+		// 14-bits address, SpeedSteps: 128 - Direction: Forward
+		assert.Equal(t, f("111111111111111 0 11000010 0 01110101 0 00111111 0 10000000 0 00001000 1"), p.SpeedAndDirection(629, 0, true, SpeedSteps128, false).String())
+	})
+
+	t.Run("pre-allocated-buffer", func(t *testing.T) {
+		var packetBuf [MaxPacketLength]bool
+		p := Packet(packetBuf[:])
+		assert.Equal(t, f("111111111111111 0 01110010 0 00111111 0 10000000 0 11001101 1"), p.SpeedAndDirection(114, 0, true, SpeedSteps128, false).String())
+		assert.Equal(t, f("111111111111111 0 01110010 0 00111111 0 10000000 0 11001101 1"), p.String())
 	})
 }
 
