@@ -47,7 +47,7 @@ func TestEncodeSpeed(t *testing.T) {
 	p := make(Packet, MaxPacketLength)
 	var encodeBuffer [MaxEncodedLength]byte
 
-	p = p.SpeedAndDirection(1, 2, true, SpeedSteps128)
+	p = p.SpeedAndDirection(1, 2, true, SpeedSteps128, false)
 	sb := EncodePacket(p, encodeBuffer[:])
 	assert.Equal(t, "0101010101 0101010101 0101010101 0011000111 0011000111 0011000111 0011001101 0011000111 0011010101 0101010011 0100110011 0011000111 0011010011 0000111101 0011010101 0100110011 0101010101", bits(sb))
 	assert.Equal(t, "52 / 17", fmt.Sprintf("%d / %d", len(p), len(sb)))
@@ -59,7 +59,7 @@ func TestEncodeAllSpeeds(t *testing.T) {
 
 	for addr := 1; addr < 200; addr++ {
 		for speed := byte(0); speed < 128; speed++ {
-			p := p.SpeedAndDirection(addr, speed, true, SpeedSteps128)
+			p := p.SpeedAndDirection(addr, speed, true, SpeedSteps128, false)
 			func() {
 				defer func() {
 					if err := recover(); err != nil {

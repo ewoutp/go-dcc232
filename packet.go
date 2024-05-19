@@ -1,21 +1,33 @@
 package dcc232
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Packet is a DCC bit stream
 type Packet []bool
 
 // String converts the packet to a binary string
 func (p Packet) String() string {
-	s := make([]byte, len(p))
+	s := make([]byte, 0, len(p)*2)
 	for i, v := range p {
 		if v {
-			s[i] = '1'
+			s = append(s, '1')
 		} else {
-			s[i] = '0'
+			s = append(s, '0')
+		}
+		if i == preambleCount-1 || i == preambleCount {
+			// End of preamble
+			s = append(s, ' ')
+		} else if i >= preambleCount {
+			bi := i - (preambleCount + 1)
+			if bi%9 >= 7 {
+				s = append(s, ' ')
+			}
 		}
 	}
-	return string(s)
+	return strings.TrimSpace(string(s))
 }
 
 // Packet length

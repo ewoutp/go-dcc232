@@ -1,14 +1,14 @@
 package dcc232
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func f(x string) string {
-	return strings.Replace(x, " ", "", -1)
+	return x
+	//return strings.Replace(x, " ", "", -1)
 }
 
 func TestIdlePacket(t *testing.T) {
@@ -19,26 +19,48 @@ func TestIdlePacket(t *testing.T) {
 func TestSpeedAndDirection(t *testing.T) {
 	p := make(Packet, MaxPacketLength)
 
-	// SpeedSteps: 14 - Direction: Forward
-	assert.Equal(t, f("111111111111111 0 00000011 0 01100000 0 01100011 1"), p.SpeedAndDirection(3, 0, true, SpeedSteps14).String())
-	assert.Equal(t, f("111111111111111 0 00000001 0 01100011 0 01100010 1"), p.SpeedAndDirection(1, 2, true, SpeedSteps14).String())
-	assert.Equal(t, f("111111111111111 0 00000001 0 01101111 0 01101110 1"), p.SpeedAndDirection(1, 14, true, SpeedSteps14).String())
-	// SpeedSteps: 14 - Direction: Reverse
-	assert.Equal(t, f("111111111111111 0 00000011 0 01000000 0 01000011 1"), p.SpeedAndDirection(3, 0, false, SpeedSteps14).String())
-	assert.Equal(t, f("111111111111111 0 00000001 0 01000011 0 01000010 1"), p.SpeedAndDirection(1, 2, false, SpeedSteps14).String())
-	assert.Equal(t, f("111111111111111 0 00000001 0 01001111 0 01001110 1"), p.SpeedAndDirection(1, 14, false, SpeedSteps14).String())
-	// SpeedSteps: 28 - Direction: Forward
-	assert.Equal(t, f("111111111111111 0 00000011 0 01100000 0 01100011 1"), p.SpeedAndDirection(3, 0, true, SpeedSteps28).String())
-	assert.Equal(t, f("111111111111111 0 00000001 0 01110010 0 01110011 1"), p.SpeedAndDirection(1, 2, true, SpeedSteps28).String())
-	assert.Equal(t, f("111111111111111 0 00000001 0 01111000 0 01111001 1"), p.SpeedAndDirection(1, 14, true, SpeedSteps28).String())
-	assert.Equal(t, f("111111111111111 0 00000001 0 01101101 0 01101100 1"), p.SpeedAndDirection(1, 23, true, SpeedSteps28).String())
-	assert.Equal(t, f("111111111111111 0 00000001 0 01111111 0 01111110 1"), p.SpeedAndDirection(1, 28, true, SpeedSteps28).String())
-	// SpeedSteps: 28 - Direction: Reverse
-	assert.Equal(t, f("111111111111111 0 00000011 0 01000000 0 01000011 1"), p.SpeedAndDirection(3, 0, false, SpeedSteps28).String())
-	assert.Equal(t, f("111111111111111 0 00000001 0 01010010 0 01010011 1"), p.SpeedAndDirection(1, 2, false, SpeedSteps28).String())
-	assert.Equal(t, f("111111111111111 0 00000001 0 01011000 0 01011001 1"), p.SpeedAndDirection(1, 14, false, SpeedSteps28).String())
-	// 14-bits address, SpeedSteps: 28 - Direction: Reverse
-	assert.Equal(t, f("111111111111111 0 11000000 0 11011000 0 01011000 0 01000000 1"), p.SpeedAndDirection(216, 14, false, SpeedSteps28).String())
+	t.Run("speedsteps 14", func(t *testing.T) {
+		// SpeedSteps: 14 - Direction: Forward
+		assert.Equal(t, f("111111111111111 0 00000011 0 01100000 0 01100011 1"), p.SpeedAndDirection(3, 0, true, SpeedSteps14, false).String())
+		assert.Equal(t, f("111111111111111 0 00000001 0 01100011 0 01100010 1"), p.SpeedAndDirection(1, 2, true, SpeedSteps14, false).String())
+		assert.Equal(t, f("111111111111111 0 00000001 0 01101111 0 01101110 1"), p.SpeedAndDirection(1, 14, true, SpeedSteps14, false).String())
+		// SpeedSteps: 14 - Direction: Reverse
+		assert.Equal(t, f("111111111111111 0 00000011 0 01000000 0 01000011 1"), p.SpeedAndDirection(3, 0, false, SpeedSteps14, false).String())
+		assert.Equal(t, f("111111111111111 0 00000001 0 01000011 0 01000010 1"), p.SpeedAndDirection(1, 2, false, SpeedSteps14, false).String())
+		assert.Equal(t, f("111111111111111 0 00000001 0 01001111 0 01001110 1"), p.SpeedAndDirection(1, 14, false, SpeedSteps14, false).String())
+	})
+
+	t.Run("speedsteps 28", func(t *testing.T) {
+		// SpeedSteps: 28 - Direction: Forward
+		assert.Equal(t, f("111111111111111 0 00000011 0 01100000 0 01100011 1"), p.SpeedAndDirection(3, 0, true, SpeedSteps28, false).String())
+		assert.Equal(t, f("111111111111111 0 00000001 0 01110010 0 01110011 1"), p.SpeedAndDirection(1, 2, true, SpeedSteps28, false).String())
+		assert.Equal(t, f("111111111111111 0 00000001 0 01111000 0 01111001 1"), p.SpeedAndDirection(1, 14, true, SpeedSteps28, false).String())
+		assert.Equal(t, f("111111111111111 0 00000001 0 01101101 0 01101100 1"), p.SpeedAndDirection(1, 23, true, SpeedSteps28, false).String())
+		assert.Equal(t, f("111111111111111 0 00000001 0 01111111 0 01111110 1"), p.SpeedAndDirection(1, 28, true, SpeedSteps28, false).String())
+		// SpeedSteps: 28 - Direction: Reverse
+		assert.Equal(t, f("111111111111111 0 00000011 0 01000000 0 01000011 1"), p.SpeedAndDirection(3, 0, false, SpeedSteps28, false).String())
+		assert.Equal(t, f("111111111111111 0 00000001 0 01010010 0 01010011 1"), p.SpeedAndDirection(1, 2, false, SpeedSteps28, false).String())
+		assert.Equal(t, f("111111111111111 0 00000001 0 01011000 0 01011001 1"), p.SpeedAndDirection(1, 14, false, SpeedSteps28, false).String())
+		// 14-bits address, SpeedSteps: 28 - Direction: Reverse
+		assert.Equal(t, f("111111111111111 0 11000000 0 11011000 0 01011000 0 01000000 1"), p.SpeedAndDirection(216, 14, false, SpeedSteps28, false).String())
+	})
+
+	t.Run("speedsteps 128", func(t *testing.T) {
+		// SpeedSteps: 128 - Direction: Forward
+		assert.Equal(t, f("111111111111111 0 00000011 0 00111111 0 10000000 0 10111100 1"), p.SpeedAndDirection(3, 0, true, SpeedSteps128, false).String())
+		assert.Equal(t, f("111111111111111 0 00000001 0 00111111 0 10000011 0 10111101 1"), p.SpeedAndDirection(1, 2, true, SpeedSteps128, false).String())
+
+		assert.Equal(t, f("111111111111111 0 00000001 0 00111111 0 10001111 0 10110001 1"), p.SpeedAndDirection(1, 14, true, SpeedSteps128, false).String())
+		assert.Equal(t, f("111111111111111 0 00000001 0 00111111 0 10011000 0 10100110 1"), p.SpeedAndDirection(1, 23, true, SpeedSteps128, false).String())
+		assert.Equal(t, f("111111111111111 0 00000001 0 00111111 0 10011101 0 10100011 1"), p.SpeedAndDirection(1, 28, true, SpeedSteps128, false).String())
+		// SpeedSteps: 128 - Direction: Reverse
+		assert.Equal(t, f("111111111111111 0 00000011 0 00111111 0 00000000 0 00111100 1"), p.SpeedAndDirection(3, 0, false, SpeedSteps128, false).String())
+		assert.Equal(t, f("111111111111111 0 00000001 0 00111111 0 00000011 0 00111101 1"), p.SpeedAndDirection(1, 2, false, SpeedSteps128, false).String())
+		assert.Equal(t, f("111111111111111 0 00000001 0 00111111 0 00001111 0 00110001 1"), p.SpeedAndDirection(1, 14, false, SpeedSteps128, false).String())
+		// 14-bits address, SpeedSteps: 128 - Direction: Reverse
+		assert.Equal(t, f("111111111111111 0 11000000 0 11011000 0 00111111 0 00001111 0 00101000 1"), p.SpeedAndDirection(216, 14, false, SpeedSteps128, false).String())
+		assert.Equal(t, f("111111111111111 0 01110010 0 00111111 0 01111111 0 00110010 1"), p.SpeedAndDirection(114, 126, false, SpeedSteps128, false).String())
+	})
 }
 
 func TestFunctionGroupOne(t *testing.T) {
