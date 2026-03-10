@@ -33,7 +33,7 @@ func (p Packet) String() string {
 // Packet length
 const (
 	// Number of preamble bits
-	preambleCount = 15
+	preambleCount = 22 // was 15
 
 	// Maximum number of bytes takes by an address
 	MaxAddressBytes = 2
@@ -110,8 +110,8 @@ func (p Packet) encodePreamble() int {
 		offset++
 	}
 	// '0'
-	offset++
 	p[offset] = false
+	offset++
 	return offset
 }
 
@@ -203,6 +203,9 @@ func (p Packet) SpeedAndDirection(address int, speed byte, direction bool, speed
 			data |= 0b00100000
 		}
 		if speedSteps == SpeedSteps14 {
+			if speed > 14 {
+				speed = 14 // Cap at limit of speed(in steps14)
+			}
 			if speed > 0 {
 				// Skip E-Stop
 				speed++
@@ -226,6 +229,9 @@ func (p Packet) SpeedAndDirection(address int, speed byte, direction bool, speed
 		offset++
 	} else {
 		// 128 speed steps
+		if speed > 126 {
+			speed = 126 // Cap at maximum
+		}
 		if speed > 0 {
 			// Skip E-Stop
 			speed++
