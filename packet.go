@@ -229,8 +229,8 @@ func (p Packet) SpeedAndDirection(address int, speed byte, direction bool, speed
 		offset++
 	} else {
 		// 128 speed steps
-		if speed > 126 {
-			speed = 126 // Cap at maximum
+		if speed > 125 {
+			speed = 125 // Cap at maximum
 		}
 		if speed > 0 {
 			// Skip E-Stop
