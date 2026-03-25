@@ -239,8 +239,8 @@ func (p Packet) SpeedAndDirection(address int, speed byte, direction bool, speed
 		// data bytes
 		data1 := byte(0b00111111)
 		data2 := speed & 0x7f
-		if direction {
-			data2 |= 0x80
+		if direction && speed > 0 {
+			data2 |= 0b10000000
 		}
 
 		error = p.encodeByte(offset, data1, error)

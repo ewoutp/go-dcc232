@@ -11,6 +11,23 @@ func f(x string) string {
 	//return strings.Replace(x, " ", "", -1)
 }
 
+func TestEncodeByte(t *testing.T) {
+	t.Run("addr=3, speed=0, direction=f", func(t *testing.T) {
+		p := make(Packet, MaxPacketLength)
+		ec := p.encodeByte(0, 0x03, 0)
+		ec = p.encodeByte(0, 0x3F, ec)
+		ec = p.encodeByte(0, 0x80, ec)
+		assert.Equal(t, byte(0xBC), ec)
+	})
+	t.Run("addr=3, speed=0, direction=r", func(t *testing.T) {
+		p := make(Packet, MaxPacketLength)
+		ec := p.encodeByte(0, 0x03, 0)
+		ec = p.encodeByte(0, 0x3F, ec)
+		ec = p.encodeByte(0, 0x00, ec)
+		assert.Equal(t, byte(0x3C), ec)
+	})
+}
+
 func TestIdlePacket(t *testing.T) {
 	p := make(Packet, MaxPacketLength)
 	p = p.IdlePacket()
