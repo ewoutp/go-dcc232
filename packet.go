@@ -5,13 +5,18 @@ import (
 	"strings"
 )
 
-// Packet is a DCC bit stream
-type Packet []bool
+// Packet contains a DCC command as a DCC bit stream and as DCC bytes.
+type Packet struct {
+	// DCC bit stream
+	dccBits []bool
+	// DCC bytes (no preamble, no intermediate '0' and no terminating '1')
+	dccBytes []uint8
+}
 
 // String converts the packet to a binary string
 func (p Packet) String() string {
-	s := make([]byte, 0, len(p)*2)
-	for i, v := range p {
+	s := make([]byte, 0, len(p.dccBits)*2)
+	for i, v := range p.dccBits {
 		if v {
 			s = append(s, '1')
 		} else {
@@ -30,6 +35,22 @@ func (p Packet) String() string {
 	return strings.TrimSpace(string(s))
 }
 
+// Returns the bytes without preamble, intermediate and terminating bits.
+func (p Packet) Bytes() []uint8 {
+	return p.dccBytes
+}
+
+// Returns the length of the packet in DCC bits.
+func (p Packet) BitLength() int {
+	return len(p.dccBits)
+}
+
+// Returns the length of the packet in DCC bytes
+// (without preamble, intermediate and terminating bits).
+func (p Packet) ByteLength() int {
+	return len(p.dccBytes)
+}
+
 // Packet length
 const (
 	// Number of preamble bits
@@ -41,7 +62,11 @@ const (
 	// Maximum number of bytes taken by the data portion of a packet
 	MaxDataBytes = 3
 
-	MaxPacketLength = preambleCount + 1 + (MaxAddressBytes * 9) + (MaxDataBytes * 9) + 9
+	// Maximum number of bytes taken by the address + data portion of a packet
+	MaxBytes = MaxAddressBytes + MaxDataBytes
+
+	// Maximum bit length of a DCC packet
+	maxPacketBitLength = preambleCount + 1 + (MaxBytes * 9) + 9
 )
 
 // SpeedSteps of a loc decoder
@@ -87,16 +112,22 @@ var (
 	}
 )
 
-// ensureMaxLength checks the capacity of the given packet.
-// If large enough for an maximum size packet, the given
-// packet is set to maximum length and return.
-// Otherwise a new packet is allocated and returned.
-func (p Packet) ensureMaxLength() Packet {
-	if cap(p) >= MaxPacketLength {
+// ensureEmptyState checks the capacity of the fields of the given packet.
+// The dccBits is initialized to maximum bit length.
+// The dccBytes is initialized to zero length with maximym bytes capacity.
+func (p *Packet) ensureEmptyState() {
+	if cap(p.dccBits) >= maxPacketBitLength {
 		// Set to max length
-		return p[:]
+		p.dccBits = p.dccBits[:]
+	} else {
+		p.dccBits = make([]bool, maxPacketBitLength)
 	}
-	return make(Packet, MaxPacketLength)
+	if cap(p.dccBytes) >= MaxBytes {
+		// Set to zero length
+		p.dccBytes = p.dccBytes[:0]
+	} else {
+		p.dccBytes = make([]uint8, 0, MaxBytes)
+	}
 }
 
 // encodePreamble writes the preamble into the head of the given packet
@@ -106,11 +137,11 @@ func (p Packet) encodePreamble() int {
 	offset := 0
 	// preamble '111111111111111'
 	for i := 0; i < preambleCount; i++ {
-		p[offset] = true
+		p.dccBits[offset] = true
 		offset++
 	}
 	// '0'
-	p[offset] = false
+	p.dccBits[offset] = false
 	offset++
 	return offset
 }
@@ -130,19 +161,19 @@ func (p Packet) encodeAddress(address, offset int, error byte) (int, byte) {
 		value := byte(address & 0x7f)
 		error = p.encodeByte(offset, value, error)
 		offset += 8
-		p[offset] = false
+		p.dccBits[offset] = false
 		offset++
 	} else {
 		// 2 address bytes
 		value1 := byte(0xc0 | ((address >> 8) & 0x3f))
 		error = p.encodeByte(offset, value1, error)
 		offset += 8
-		p[offset] = false
+		p.dccBits[offset] = false
 		offset++
 		value2 := byte(address & 0xff)
 		error = p.encodeByte(offset, value2, error)
 		offset += 8
-		p[offset] = false
+		p.dccBits[offset] = false
 		offset++
 	}
 	return offset, error
@@ -152,9 +183,10 @@ func (p Packet) encodeAddress(address, offset int, error byte) (int, byte) {
 // from given offset of the packet.
 // Returns: updated error code
 func (p Packet) encodeByte(offset int, value, error byte) byte {
+	p.dccBytes = append(p.dccBytes, value)
 	result := error ^ value
 	for i := 7; i >= 0; i-- {
-		p[offset+i] = (value & 0x01) == 1
+		p.dccBits[offset+i] = (value & 0x01) == 1
 		value = value >> 1
 	}
 	return result
@@ -163,7 +195,7 @@ func (p Packet) encodeByte(offset int, value, error byte) byte {
 // IdlePacket creates an Idle packet
 func (p Packet) IdlePacket() Packet {
 	// Use packet of maximum length
-	p = p.ensureMaxLength()
+	p.ensureEmptyState()
 
 	// Preamble
 	offset := p.encodePreamble()
@@ -177,16 +209,17 @@ func (p Packet) IdlePacket() Packet {
 	// '11111111 1'
 	p.encodeByte(offset, error, 0)
 	offset += 8
-	p[offset] = true
+	p.dccBits[offset] = true
 	offset++
-	return p[:offset]
+	p.dccBits = p.dccBits[:offset]
+	return p
 }
 
 // SpeedAndDirection creates a standard speed & direction packet
 // Note: FL is only used for speedSteps=14
 func (p Packet) SpeedAndDirection(address int, speed byte, direction bool, speedSteps SpeedSteps, fl bool) Packet {
 	// Use packet of maximum length
-	p = p.ensureMaxLength()
+	p.ensureEmptyState()
 
 	// Preamble
 	offset := p.encodePreamble()
@@ -225,12 +258,12 @@ func (p Packet) SpeedAndDirection(address int, speed byte, direction bool, speed
 
 		error = p.encodeByte(offset, data, error)
 		offset += 8
-		p[offset] = false
+		p.dccBits[offset] = false
 		offset++
 	} else {
 		// 128 speed steps
-		if speed > 125 {
-			speed = 125 // Cap at maximum
+		if speed > 126 {
+			speed = 126 // Cap at maximum
 		}
 		if speed > 0 {
 			// Skip E-Stop
@@ -239,30 +272,31 @@ func (p Packet) SpeedAndDirection(address int, speed byte, direction bool, speed
 		// data bytes
 		data1 := byte(0b00111111)
 		data2 := speed & 0x7f
-		if direction && speed > 0 {
+		if direction /*&& speed > 0*/ {
 			data2 |= 0b10000000
 		}
 
 		error = p.encodeByte(offset, data1, error)
 		offset += 8
-		p[offset] = false
+		p.dccBits[offset] = false
 		offset++
 		error = p.encodeByte(offset, data2, error)
 		offset += 8
-		p[offset] = false
+		p.dccBits[offset] = false
 		offset++
 	}
 	p.encodeByte(offset, error, 0)
 	offset += 8
-	p[offset] = true
+	p.dccBits[offset] = true
 	offset++
-	return p[:offset]
+	p.dccBits = p.dccBits[:offset]
+	return p
 }
 
 // FunctionGroupOne creates a packet to control F0, F1-F4
 func (p Packet) FunctionGroupOne(address int, fl, f1, f2, f3, f4 bool) Packet {
 	// Use packet of maximum length
-	p = p.ensureMaxLength()
+	p.ensureEmptyState()
 
 	// Preamble
 	offset := p.encodePreamble()
@@ -290,14 +324,15 @@ func (p Packet) FunctionGroupOne(address int, fl, f1, f2, f3, f4 bool) Packet {
 	}
 	error = p.encodeByte(offset, data, error)
 	offset += 8
-	p[offset] = false
+	p.dccBits[offset] = false
 	offset++
 
 	p.encodeByte(offset, error, 0)
 	offset += 8
-	p[offset] = true
+	p.dccBits[offset] = true
 	offset++
-	return p[:offset]
+	p.dccBits = p.dccBits[:offset]
+	return p
 }
 
 // FunctionGroupTwo creates a packet to control F5-F8 (firstIndex=5) or F9-F12 (firstIndex=9)
@@ -312,7 +347,7 @@ func (p Packet) FunctionGroupTwo(address int, firstIndex byte, fa, fb, fc, fd bo
 		panic(fmt.Errorf("invalid firstIndex %d", firstIndex))
 	}
 	// Use packet of maximum length
-	p = p.ensureMaxLength()
+	p.ensureEmptyState()
 
 	// Preamble
 	offset := p.encodePreamble()
@@ -336,12 +371,13 @@ func (p Packet) FunctionGroupTwo(address int, firstIndex byte, fa, fb, fc, fd bo
 	}
 	error = p.encodeByte(offset, data, error)
 	offset += 8
-	p[offset] = false
+	p.dccBits[offset] = false
 	offset++
 
 	p.encodeByte(offset, error, 0)
 	offset += 8
-	p[offset] = true
+	p.dccBits[offset] = true
 	offset++
-	return p[:offset]
+	p.dccBits = p.dccBits[:offset]
+	return p
 }

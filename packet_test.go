@@ -13,14 +13,16 @@ func f(x string) string {
 
 func TestEncodeByte(t *testing.T) {
 	t.Run("addr=3, speed=0, direction=f", func(t *testing.T) {
-		p := make(Packet, MaxPacketLength)
+		var p Packet
+		p.ensureEmptyState()
 		ec := p.encodeByte(0, 0x03, 0)
 		ec = p.encodeByte(0, 0x3F, ec)
 		ec = p.encodeByte(0, 0x80, ec)
 		assert.Equal(t, byte(0xBC), ec)
 	})
 	t.Run("addr=3, speed=0, direction=r", func(t *testing.T) {
-		p := make(Packet, MaxPacketLength)
+		var p Packet
+		p.ensureEmptyState()
 		ec := p.encodeByte(0, 0x03, 0)
 		ec = p.encodeByte(0, 0x3F, ec)
 		ec = p.encodeByte(0, 0x00, ec)
@@ -29,12 +31,13 @@ func TestEncodeByte(t *testing.T) {
 }
 
 func TestIdlePacket(t *testing.T) {
-	p := make(Packet, MaxPacketLength)
+	var p Packet
 	p = p.IdlePacket()
 	assert.Equal(t, f("1111111111111111111111 0 11111111 0 00000000 0 11111111 1"), p.String())
 }
+
 func TestSpeedAndDirection(t *testing.T) {
-	p := make(Packet, MaxPacketLength)
+	var p Packet
 
 	t.Run("speedsteps 14", func(t *testing.T) {
 		// SpeedSteps: 14 - Direction: Forward
@@ -81,16 +84,26 @@ func TestSpeedAndDirection(t *testing.T) {
 		assert.Equal(t, f("1111111111111111111111 0 11000010 0 01110101 0 00111111 0 10000000 0 00001000 1"), p.SpeedAndDirection(629, 0, true, SpeedSteps128, false).String())
 	})
 
-	t.Run("pre-allocated-buffer", func(t *testing.T) {
-		var packetBuf [MaxPacketLength]bool
-		p := Packet(packetBuf[:])
-		p = p.SpeedAndDirection(114, 0, true, SpeedSteps128, false)
-		assert.Equal(t, f("1111111111111111111111 0 01110010 0 00111111 0 10000000 0 11001101 1"), p.String())
+	t.Run("stress", func(t *testing.T) {
+		for locAddr := 3; locAddr < 400; locAddr++ {
+			for speed := byte(0); speed < 128; speed++ {
+				var p Packet
+				p = p.SpeedAndDirection(locAddr, speed, false, SpeedSteps128, false)
+				if locAddr > 127 {
+					assert.Equal(t, 79, len(p.String()))
+				} else {
+					assert.Equal(t, 68, len(p.String()))
+				}
+				encoded := EncodePacket(p, EncodingTargetSerialExact, nil)
+				assert.GreaterOrEqual(t, len(encoded), 15)
+				assert.LessOrEqual(t, len(encoded), 22)
+			}
+		}
 	})
 }
 
 func TestFunctionGroupOne(t *testing.T) {
-	p := make(Packet, MaxPacketLength)
+	var p Packet
 
 	// Address=216, FL=1, F1=0, F2=0, F3=0, F4=0
 	assert.Equal(t, f("1111111111111111111111 0 11000000 0 11011000 0 10010000 0 10001000 1"), p.FunctionGroupOne(216, true, false, false, false, false).String())

@@ -20,41 +20,41 @@ func bits(encoded []byte) string {
 }
 
 func TestEncodePacket(t *testing.T) {
-	p := make(Packet, MaxPacketLength)
+	var p Packet
 	var encodeBuffer [MaxEncodedLength]byte
 
 	p = p.IdlePacket()
 	// Encode with buffer
-	sb := EncodePacket(p, encodeBuffer[:])
+	sb := EncodePacket(p, EncodingTargetSerialExact, encodeBuffer[:])
 	assert.Equal(t, "555555556555c5c6c6c6c6565555", hex.EncodeToString(sb))
 	assert.Equal(t, "0101010101 0101010101 0101010101 0101010101 0101001101 0101010101 0101000111 0011000111 0011000111 0011000111 0011000111 0011010101 0101010101 0101010101", bits(sb))
-	assert.Equal(t, "50 / 14", fmt.Sprintf("%d / %d", len(p), len(sb)))
+	assert.Equal(t, "50 / 14", fmt.Sprintf("%d / %d", p.BitLength(), len(sb)))
 
 	// Encode without buffer
-	sb = EncodePacket(p, nil)
+	sb = EncodePacket(p, EncodingTargetSerialExact, nil)
 	assert.Equal(t, "555555556555c5c6c6c6c6565555", hex.EncodeToString(sb))
 	assert.Equal(t, "0101010101 0101010101 0101010101 0101010101 0101001101 0101010101 0101000111 0011000111 0011000111 0011000111 0011000111 0011010101 0101010101 0101010101", bits(sb))
-	assert.Equal(t, "50 / 14", fmt.Sprintf("%d / %d", len(p), len(sb)))
+	assert.Equal(t, "50 / 14", fmt.Sprintf("%d / %d", p.BitLength(), len(sb)))
 
 	// Encode with buffer that is too small
-	sb = EncodePacket(p, make([]byte, 0, 2))
+	sb = EncodePacket(p, EncodingTargetSerialExact, make([]byte, 0, 2))
 	assert.Equal(t, "555555556555c5c6c6c6c6565555", hex.EncodeToString(sb))
 	assert.Equal(t, "0101010101 0101010101 0101010101 0101010101 0101001101 0101010101 0101000111 0011000111 0011000111 0011000111 0011000111 0011010101 0101010101 0101010101", bits(sb))
-	assert.Equal(t, "50 / 14", fmt.Sprintf("%d / %d", len(p), len(sb)))
+	assert.Equal(t, "50 / 14", fmt.Sprintf("%d / %d", p.BitLength(), len(sb)))
 }
 
 func TestEncodeSpeed(t *testing.T) {
-	p := make(Packet, MaxPacketLength)
+	var p Packet
 	var encodeBuffer [MaxEncodedLength]byte
 
 	p = p.SpeedAndDirection(1, 2, true, SpeedSteps128, false)
-	sb := EncodePacket(p, encodeBuffer[:])
+	sb := EncodePacket(p, EncodingTargetSerialExact, encodeBuffer[:])
 	assert.Equal(t, "0101010101 0101010101 0101010101 0101010101 0101000111 0011000111 0011000111 0011000111 0011010011 0011001101 0101010101 0011010011 0011000111 0011001101 0100011101 0011010101 0100110101", bits(sb))
-	assert.Equal(t, "59 / 17", fmt.Sprintf("%d / %d", len(p), len(sb)))
+	assert.Equal(t, "59 / 17", fmt.Sprintf("%d / %d", p.BitLength(), len(sb)))
 }
 
 func TestEncodeAllSpeeds(t *testing.T) {
-	p := make(Packet, MaxPacketLength)
+	var p Packet
 	var encodeBuffer [MaxEncodedLength]byte
 
 	for addr := 1; addr < 200; addr++ {
@@ -67,18 +67,18 @@ func TestEncodeAllSpeeds(t *testing.T) {
 					}
 
 				}()
-				EncodePacket(p, encodeBuffer[:])
+				EncodePacket(p, EncodingTargetSerialExact, encodeBuffer[:])
 			}()
 		}
 	}
 }
 
 func TestEncodeFunctionGroupOne(t *testing.T) {
-	p := make(Packet, MaxPacketLength)
+	var p Packet
 	var encodeBuffer [MaxEncodedLength]byte
 
 	p = p.FunctionGroupOne(216, true, false, false, false, false)
-	sb := EncodePacket(p, encodeBuffer[:])
+	sb := EncodePacket(p, EncodingTargetSerialExact, encodeBuffer[:])
 	assert.Equal(t, "1111111111111111111111 0 11000000 0 11011000 0 10010000 0 10001000 1", p.String())
 	assert.Equal(t, "0101010101 0101010101 0101010101 0101010101 0101001101 0100110011 0011000111 0011000111 0001110101 0001110101 0011000111 0011001101 0011001101 0011000111 0011000111 0011010011 0011001101 0011000111 0011010101", bits(sb))
 }
